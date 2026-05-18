@@ -20,7 +20,9 @@ origin-core is a TypeScript + Solidity monorepo. The system is split across:
 
 ## Circle Integration Map
 
-Reviewers from Circle: the following files contain our integrations with Circle's developer stack. Everything else in the repo is either stubbed for future implementation or is non-Circle infrastructure.
+Reviewers from Circle: see [**CIRCLE_INTEGRATION.md**](./CIRCLE_INTEGRATION.md) for the full per-product file map with a recommended 5-minute reading order. The summary below is the same map, condensed.
+
+The following files contain our integrations with Circle's developer stack. Everything else in the repo is either stubbed for future implementation or is non-Circle infrastructure.
 
 | Circle Technology | Where it's used in origin-core |
 |---|---|

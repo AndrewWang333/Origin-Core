@@ -1,0 +1,3 @@
+# Local-dev docker-compose for Origin services — implementation pending. See README.md.
+version: "3.9"
+services: {}

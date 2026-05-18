@@ -28,7 +28,8 @@ const STABLEFX_BASE_URL = "https://api.circle.com/v1/exchange/stablefx";
  *
  * The full taker flow has four steps:
  *   1. Request a tradable quote (`requestQuote`).
- *   2. Sign the Permit2 typed data (handled by `apps/wallet-service/src/signer.ts`).
+ *   2. Sign the Permit2 typed data with the Origin operator key (see
+ *      `apps/collateral-service/src/handlers/fx-conversion.ts`).
  *   3. Create the trade (`createTrade`).
  *   4. Fund the trade by signing and submitting the funding presign (`getFundingPresign`,
  *      then `fundTrade`).

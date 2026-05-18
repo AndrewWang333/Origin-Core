@@ -57,31 +57,19 @@ The "Global Exchange" pillar. Origin uses StableFX both internally (multi-curren
 
 ---
 
-## 5. Circle Developer-Controlled Wallets
+## 5. Permit2 (gasless approvals for StableFX)
 
-Per-sub-account on-chain wallets on Arc. One KYB'd entity = one wallet set, each named sub-account = one Arc wallet, all controlled by Origin's Circle entity secret.
-
-| File | Purpose |
-|---|---|
-| [`packages/circle/src/wallets/client.ts`](packages/circle/src/wallets/client.ts) | Wraps `@circle-fin/developer-controlled-wallets`. Wallet-set + wallet provisioning. |
-| [`apps/wallet-service/src/account-provisioning.ts`](apps/wallet-service/src/account-provisioning.ts) | Institution provisioning flow (entity → wallet set → N sub-account wallets) |
-| [`apps/wallet-service/src/signer.ts`](apps/wallet-service/src/signer.ts) | EIP-712 signing through Circle's secure enclave (no raw private keys on Origin servers) |
-
----
-
-## 6. Permit2 (gasless approvals for StableFX)
-
-Every StableFX transfer is authorized through Permit2 rather than per-transaction ERC-20 `approve()`.
+Every StableFX transfer is authorized through Permit2 rather than per-transaction ERC-20 `approve()`. Origin signs the Permit2 typed-data payload with its operator key on behalf of the pooled `CollateralVault`.
 
 | File | Purpose |
 |---|---|
 | [`contracts/src/interfaces/IERC20Permit2.sol`](contracts/src/interfaces/IERC20Permit2.sol) | Minimal Permit2 interface used by StableFX |
 | [`contracts/src/constants/Tokens.sol`](contracts/src/constants/Tokens.sol) | Canonical Permit2 address on Arc (`0xffd2…f1AE`) |
-| [`apps/wallet-service/src/signer.ts`](apps/wallet-service/src/signer.ts) | Signs the Permit2 typed-data payload returned by StableFX |
+| [`apps/collateral-service/src/handlers/fx-conversion.ts`](apps/collateral-service/src/handlers/fx-conversion.ts) | Signs the Permit2 typed-data payload returned by StableFX with the Origin operator key |
 
 ---
 
-## 7. CCTP v2 (cross-chain USDC into Arc)
+## 6. CCTP v2 (cross-chain USDC into Arc)
 
 Institutions bring USDC into Arc from Ethereum / Solana / Arbitrum / Base / Avalanche / Optimism / Polygon via native burn-and-mint — no wrapped assets.
 
@@ -92,7 +80,7 @@ Institutions bring USDC into Arc from Ethereum / Solana / Arbitrum / Base / Aval
 
 ---
 
-## 8. Circle webhook signatures
+## 7. Circle webhook signatures
 
 Trade lifecycle events (`pending_settlement → taker_funded → maker_funded → settled`) arrive as signed webhooks.
 
@@ -119,7 +107,7 @@ If you only have five minutes, read these in order:
 1. [`README.md`](README.md) — high-level architecture and the same map summarized
 2. [`packages/circle/src/chain/arc.ts`](packages/circle/src/chain/arc.ts) — Arc chain config
 3. [`contracts/src/constants/Tokens.sol`](contracts/src/constants/Tokens.sol) — every Circle stablecoin enumerated
-4. [`packages/circle/src/stablefx/client.ts`](packages/circle/src/stablefx/client.ts) — full StableFX taker flow
-5. [`apps/collateral-service/src/handlers/fx-conversion.ts`](apps/collateral-service/src/handlers/fx-conversion.ts) — the same flow applied to a real product use case
-6. [`apps/wallet-service/src/account-provisioning.ts`](apps/wallet-service/src/account-provisioning.ts) — Developer-Controlled Wallets model
+4. [`contracts/src/collateral/CollateralVault.sol`](contracts/src/collateral/CollateralVault.sol) — pooled on-chain custody for the Circle stablecoin family
+5. [`packages/circle/src/stablefx/client.ts`](packages/circle/src/stablefx/client.ts) — full StableFX taker flow
+6. [`apps/collateral-service/src/handlers/fx-conversion.ts`](apps/collateral-service/src/handlers/fx-conversion.ts) — the same flow applied to a real product use case
 7. [`packages/circle/src/cctp/bridge.ts`](packages/circle/src/cctp/bridge.ts) — CCTP v2 inbound flow

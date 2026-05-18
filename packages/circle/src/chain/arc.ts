@@ -76,8 +76,8 @@ export function createArcPublicClient(network: "mainnet" | "testnet" = "mainnet"
 
 /**
  * Wallet client factory for write operations against Arc. The signing account is supplied
- * by the caller — Origin services typically use Circle Developer-Controlled Wallets
- * (see `../wallets/client.ts`) rather than raw private keys.
+ * by the caller — Origin services typically pass the operator account loaded from
+ * `ORIGIN_OPERATOR_PRIVATE_KEY` (or a downstream KMS-backed signer in production).
  */
 export function createArcWalletClient(
   account: Parameters<typeof createWalletClient>[0]["account"],

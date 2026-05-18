@@ -29,8 +29,7 @@ The following files contain our integrations with Circle's developer stack. Ever
 | **USDC on Arc** (collateral, settlement, fees) | `contracts/src/constants/Tokens.sol`, `contracts/src/collateral/CollateralVault.sol`, `apps/collateral-service/src/handlers/deposit.ts` |
 | **EURC and partner stablecoins** (multi-currency collateral) | `contracts/src/constants/Tokens.sol`, `apps/collateral-service/src/handlers/fx-conversion.ts` |
 | **StableFX** (RFQ FX engine for multi-currency margin) | `packages/circle/src/stablefx/*`, `apps/collateral-service/src/handlers/fx-conversion.ts`, `apps/collateral-service/src/settlement/stablefx-settler.ts`, `apps/api-gateway/src/routes/fx.ts`, `contracts/src/settlement/StableFXAdapter.sol` |
-| **Circle Developer-Controlled Wallets** (sub-account provisioning) | `packages/circle/src/wallets/client.ts`, `apps/wallet-service/src/account-provisioning.ts` |
-| **Permit2** (gasless approvals for StableFX) | `contracts/src/interfaces/IERC20Permit2.sol`, `apps/wallet-service/src/signer.ts` |
+| **Permit2** (gasless approvals for StableFX) | `contracts/src/interfaces/IERC20Permit2.sol`, `apps/collateral-service/src/handlers/fx-conversion.ts` |
 | **CCTP v2** (cross-chain USDC into Arc) | `packages/circle/src/cctp/bridge.ts`, `apps/collateral-service/src/settlement/cctp-finalizer.ts` |
 | **Arc chain client** (chain config, USDC-denominated gas) | `packages/circle/src/chain/arc.ts`, `packages/circle/src/chain/paymaster.ts` |
 | **Circle Webhook signatures** (trade lifecycle events) | `packages/circle/src/stablefx/webhooks.ts` |

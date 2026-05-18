@@ -15,8 +15,9 @@ import { executeFXConversion } from "../../../collateral-service/src/handlers/fx
  * converting realized PnL from USDC back to KRW1 for treasury reporting.
  *
  * These endpoints are thin wrappers over StableFX's RFQ flow with Origin acting as the
- * taker on behalf of the user's sub-account. The user signs nothing — Origin signs
- * with their Circle Developer Wallet.
+ * taker on behalf of the requesting institution. The user signs nothing — Origin signs
+ * with the operator key and updates the off-chain ledger when settlement confirms.
+ * Funds remain pooled in the on-chain CollateralVault throughout.
  */
 
 export async function fxRoutes(app: FastifyInstance): Promise<void> {
@@ -49,12 +50,13 @@ export async function fxRoutes(app: FastifyInstance): Promise<void> {
 
   /**
    * POST /v1/fx/convert
-   * Execute an FX conversion on a sub-account.
+   * Execute an FX conversion attributed to an off-chain ledger account.
+   * The recipient address is always the CollateralVault.
    */
   app.post<{
     Body: {
-      subAccountWalletId: string;
-      subAccountAddress: `0x${string}`;
+      accountId: string;
+      recipientAddress: `0x${string}`;
       from: StableFXCurrency;
       to: StableFXCurrency;
       amount: string;

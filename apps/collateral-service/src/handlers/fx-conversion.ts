@@ -1,8 +1,5 @@
-import { StableFXClient, type StableFXCurrency } from "@origin/circle";
-// NOTE: corrected relative path — the wallet-service signer is three levels up from
-// `apps/collateral-service/src/handlers/`. The original brief printed `../..` which
-// resolved inside collateral-service; the correct prefix is `../../..` to reach `apps/`.
-import { signTypedDataWithCircleWallet } from "../../../wallet-service/src/signer.js";
+import { StableFXClient, type StableFXCurrency, type StableFXTypedData } from "@origin/circle";
+import { privateKeyToAccount } from "viem/accounts";
 
 /**
  * Multi-currency collateral FX conversion via Circle StableFX.
@@ -11,22 +8,31 @@ import { signTypedDataWithCircleWallet } from "../../../wallet-service/src/signe
  * institution to hold collateral in EURC, JPYC, KRW1, BRLA, or any other Circle-supported
  * stablecoin and still trade USDC-denominated perpetuals.
  *
- * The flow when an FX leg is needed:
- *   1. Origin's MarginEngine determines that a USDC-denominated obligation must be
- *      settled from a non-USDC collateral balance (e.g., EURC).
- *   2. This handler requests a StableFX quote for EURC -> USDC.
- *   3. Origin signs the Permit2 typed data with the sub-account's Circle wallet.
+ * Settlement model:
+ *   - Institutional funds are held in Origin's on-chain CollateralVault.
+ *   - Origin keeps a per-institution off-chain ledger; on-chain custody is pooled.
+ *   - Origin acts as the StableFX taker from an operator address. The operator signs
+ *     the Permit2 typed data; settlement lands USDC back into the CollateralVault.
+ *   - Internal ledger debits the source currency and credits the destination after
+ *     the StableFX webhook confirms `settled`.
+ *
+ * Flow when an FX leg is needed:
+ *   1. MarginEngine determines a USDC-denominated obligation must be covered from a
+ *      non-USDC collateral balance (e.g., EURC).
+ *   2. This handler requests a tradable StableFX quote.
+ *   3. The Origin operator account signs the Permit2 typed data.
  *   4. Origin creates the trade and funds it.
- *   5. The StableFX settlement contract escrows both sides PvP; the swap settles on Arc.
- *   6. The settled USDC is credited to the appropriate margin account.
+ *   5. StableFX settles PvP on Arc; the destination currency lands at the vault.
+ *   6. The off-chain ledger is updated for the requesting account.
  */
 
 export interface FXConversionRequest {
-  /** Origin sub-account performing the conversion. */
-  subAccountWalletId: string;
-  /** Sub-account on-chain address (also the recipientAddress for the destination currency). */
-  subAccountAddress: `0x${string}`;
-  /** Source currency held by the sub-account. */
+  /** Off-chain ledger key for the requesting institution / sub-account. Funds remain
+   *  pooled in the on-chain CollateralVault; this id is for accounting only. */
+  accountId: string;
+  /** On-chain recipient for the destination currency — always the CollateralVault. */
+  recipientAddress: `0x${string}`;
+  /** Source currency drawn from the pooled vault on behalf of the account. */
   from: StableFXCurrency;
   /** Destination currency required for settlement. */
   to: StableFXCurrency;
@@ -43,6 +49,25 @@ export interface FXConversionResult {
   status: string;
 }
 
+/**
+ * Sign a StableFX Permit2 typed-data payload with the Origin operator key.
+ *
+ * The operator account is the on-chain identity that takes the StableFX side on
+ * Origin's behalf. Funds flow from the CollateralVault to the StableFX escrow under
+ * an allowance granted to Permit2; the operator signature authorizes that movement.
+ */
+async function signWithOperator(typedData: StableFXTypedData): Promise<`0x${string}`> {
+  const pk = process.env.ORIGIN_OPERATOR_PRIVATE_KEY;
+  if (!pk) throw new Error("ORIGIN_OPERATOR_PRIVATE_KEY is not configured");
+  const account = privateKeyToAccount(pk as `0x${string}`);
+  return account.signTypedData({
+    domain: typedData.domain,
+    types: typedData.types as never,
+    primaryType: typedData.primaryType,
+    message: typedData.message as never,
+  });
+}
+
 export async function executeFXConversion(
   req: FXConversionRequest,
 ): Promise<FXConversionResult> {
@@ -56,19 +81,16 @@ export async function executeFXConversion(
     to: { currency: req.to },
     tenor: "instant",
     type: "tradable",
-    recipientAddress: req.subAccountAddress,
+    recipientAddress: req.recipientAddress,
   });
 
-  // 2. Sign the Permit2 typed data with the sub-account's Circle wallet.
-  const signature = await signTypedDataWithCircleWallet({
-    walletId: req.subAccountWalletId,
-    typedData: quote.typedData,
-  });
+  // 2. Sign the Permit2 typed data with the Origin operator key.
+  const signature = await signWithOperator(quote.typedData);
 
   // 3. Create the trade.
   const trade = await stablefx.createTrade({
     quoteId: quote.id,
-    address: req.subAccountAddress,
+    address: req.recipientAddress,
     message: quote.typedData.message,
     signature,
   });
@@ -78,12 +100,10 @@ export async function executeFXConversion(
     contractTradeIds: [trade.contractTradeId],
     type: "taker",
   });
-  const fundingSig = await signTypedDataWithCircleWallet({
-    walletId: req.subAccountWalletId,
-    typedData: funding.typedData,
-  });
+  const fundingSig = await signWithOperator(funding.typedData);
 
-  // 5. Submit funding. After this, StableFX handles settlement on Arc.
+  // 5. Submit funding. After this, StableFX handles settlement on Arc and the
+  //    settlement webhook updates the off-chain ledger for `req.accountId`.
   await stablefx.fundTrade({
     type: "taker",
     signature: fundingSig,

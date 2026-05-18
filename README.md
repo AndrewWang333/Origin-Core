@@ -35,6 +35,7 @@ The following files contain our integrations with Circle's developer stack. Ever
 | **Circle Webhook signatures** (trade lifecycle events) | `packages/circle/src/stablefx/webhooks.ts` |
 | **Circle Gateway** (unified USDC balances) | `packages/circle/src/gateway/client.ts` — *roadmap* |
 | **Circle Mint** (fiat ramps for institutions) | `packages/circle/src/mint/client.ts` — *roadmap* |
+| **Arc opt-in privacy** (TEE-based confidential transfer amounts; view keys for selective disclosure to compliance and auditors) | *Pending Arc feature release ([docs](https://docs.arc.io/arc/concepts/opt-in-privacy))* — *roadmap* |
 
 ## Why this is on Arc
 
